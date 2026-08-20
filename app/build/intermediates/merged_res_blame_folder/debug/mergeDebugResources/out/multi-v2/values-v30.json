@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.android.tskmgr.app-mergeDebugResources-50:/values-v30/values-v30.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\yancy\\.gradle\\caches\\8.9\\transforms\\0ce3c399f3e4fad9e0fd4c6a7a3470e0\\transformed\\material3-release\\res\\values-v30\\values-v30.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "72",
+                        "endOffsets": "123"
+                    }
+                }
+            ]
+        }
+    ]
+}

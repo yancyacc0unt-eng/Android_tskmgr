@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">#0B57D0</color>
+    <string name="app_name">Task Manager</string>
+    <style name="Theme.TskMgr" parent="android:Theme.Material.Light.NoActionBar"/>
+</resources>
