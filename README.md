@@ -1,3 +1,5 @@
+tanks to the developer : deepseek-v4-flash
+
 # Android Task Manager
 
 A native Android task manager app inspired by Windows Task Manager, built with
