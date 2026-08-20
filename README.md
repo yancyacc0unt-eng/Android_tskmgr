@@ -15,7 +15,7 @@ Four tabs via bottom navigation:
 
 | Tab | What it shows |
 |-----|---------------|
-| **Processes** | Running processes visible to the app (icon, name, PID, memory, state) with a stop button, plus recently used apps from `UsageStatsManager` (requires usage access). |
+| **Processes** | Running processes visible to the app (icon, name, PID, memory, state) with a stop button, plus recently used apps from `UsageStatsManager` labeled **Running / Active / Background** (requires usage access). |
 | **Performance** | Live charts (1 s refresh): CPU (or load average), memory, storage and network RX/TX curves, drawn with a custom Canvas. |
 | **Storage** | Shared storage usage bar with used / free / total. |
 | **Settings** | Usage access permission guide and app info. |

@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -35,10 +36,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
+import com.android.tskmgr.data.PermissionsHelper
 import com.android.tskmgr.data.ProcessInfo
 import com.android.tskmgr.data.RecentAppInfo
 import com.android.tskmgr.data.SystemMetrics
@@ -49,6 +52,7 @@ import java.util.concurrent.TimeUnit
 fun ProcessesScreen(viewModel: ProcessViewModel) {
     val state by viewModel.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
 
     LaunchedEffect(state.snackbar) {
         val msg = state.snackbar ?: return@LaunchedEffect
@@ -76,7 +80,7 @@ fun ProcessesScreen(viewModel: ProcessViewModel) {
                 }
                 if (!state.hasUsageAccess) {
                     item {
-                        UsageAccessHint()
+                        UsageAccessHint(onOpenSettings = { PermissionsHelper.openUsageAccessSettings(context) })
                     }
                 }
                 items(state.recentApps, key = { it.packageName }) { app ->
@@ -120,19 +124,24 @@ private fun SectionHeader(title: String) {
 }
 
 @Composable
-private fun UsageAccessHint() {
+private fun UsageAccessHint(onOpenSettings: () -> Unit) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp, 8.dp),
     ) {
-        Text(
-            text = "Grant \"Usage access\" in the Settings tab to see recently used apps.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(12.dp),
-        )
+        Column(Modifier.padding(12.dp)) {
+            Text(
+                text = "Usage access is off. Enable it to see active and recently used apps.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onTertiaryContainer,
+            )
+            Spacer(Modifier.height(8.dp))
+            Button(onClick = onOpenSettings) {
+                Text("Open Settings")
+            }
+        }
     }
 }
 
@@ -181,6 +190,16 @@ private fun ProcessRow(process: ProcessInfo, onKill: () -> Unit) {
 
 @Composable
 private fun RecentAppRow(app: RecentAppInfo) {
+    val statusText = when {
+        app.isRunning -> "Running"
+        app.isActive -> "Active"
+        else -> "Background"
+    }
+    val statusColor = when {
+        app.isRunning -> MaterialTheme.colorScheme.primary
+        app.isActive -> MaterialTheme.colorScheme.tertiary
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
     Row(
         Modifier
             .fillMaxWidth()
@@ -198,9 +217,9 @@ private fun RecentAppRow(app: RecentAppInfo) {
             )
         }
         Text(
-            text = if (app.isRunning) "Running" else "Not running",
+            text = statusText,
             style = MaterialTheme.typography.labelMedium,
-            color = if (app.isRunning) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            color = statusColor,
         )
     }
 }

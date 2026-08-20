@@ -25,4 +25,6 @@ data class RecentAppInfo(
     val appIcon: Drawable?,
     val lastUsedMillis: Long,
     val isRunning: Boolean,
+    /** True when the app had an activity resumed within the last ~10 minutes. */
+    val isActive: Boolean,
 )
