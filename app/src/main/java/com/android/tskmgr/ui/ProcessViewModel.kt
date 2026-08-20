@@ -32,16 +32,20 @@ class ProcessViewModel(app: Application) : AndroidViewModel(app) {
     init {
         viewModelScope.launch(Dispatchers.Default) {
             while (isActive) {
-                val running = repo.getRunningProcesses()
-                val runningNames = running.map { it.processName }.toSet()
-                val hasAccess = PermissionsHelper.hasUsageAccess(getApplication())
-                val recent = if (hasAccess) repo.getRecentApps(runningNames) else emptyList()
-                _state.value = ProcessUiState(
-                    processes = running,
-                    recentApps = recent,
-                    hasUsageAccess = hasAccess,
-                    loading = false,
-                )
+                try {
+                    val running = repo.getRunningProcesses()
+                    val runningNames = running.map { it.processName }.toSet()
+                    val hasAccess = PermissionsHelper.hasUsageAccess(getApplication())
+                    val recent = if (hasAccess) repo.getRecentApps(runningNames) else emptyList()
+                    _state.value = ProcessUiState(
+                        processes = running,
+                        recentApps = recent,
+                        hasUsageAccess = hasAccess,
+                        loading = false,
+                    )
+                } catch (e: Exception) {
+                    _state.value = _state.value.copy(loading = false)
+                }
                 delay(2000)
             }
         }

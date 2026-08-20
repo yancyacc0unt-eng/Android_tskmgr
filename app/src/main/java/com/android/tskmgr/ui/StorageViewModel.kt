@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.tskmgr.data.SystemMetrics
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,9 +17,13 @@ class StorageViewModel(app: Application) : AndroidViewModel(app) {
     val storage: StateFlow<SystemMetrics.StorageInfo?> = _storage.asStateFlow()
 
     init {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.Default) {
             while (isActive) {
-                _storage.value = SystemMetrics.readStorage()
+                try {
+                    _storage.value = SystemMetrics.readStorage()
+                } catch (e: Exception) {
+                    // Ignore sampling failures.
+                }
                 delay(3000)
             }
         }

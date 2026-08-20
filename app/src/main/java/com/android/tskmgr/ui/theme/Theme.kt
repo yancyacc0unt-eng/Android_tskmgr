@@ -33,7 +33,13 @@ fun TskMgrTheme(
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            try {
+                if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            } catch (e: Exception) {
+                // Some Android 12 devices don't expose the dynamic-color system
+                // palette; fall back to the static scheme instead of crashing.
+                if (darkTheme) DarkColors else LightColors
+            }
         }
         darkTheme -> DarkColors
         else -> LightColors

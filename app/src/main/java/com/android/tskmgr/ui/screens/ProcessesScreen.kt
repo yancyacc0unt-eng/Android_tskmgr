@@ -227,8 +227,18 @@ private fun RecentAppRow(app: RecentAppInfo) {
 @Composable
 private fun AppIcon(icon: android.graphics.drawable.Drawable?, modifier: Modifier = Modifier) {
     if (icon != null) {
-        val bmp = remember(icon) { icon.toBitmap(96, 96).asImageBitmap() }
-        Image(bmp, contentDescription = null, modifier = modifier)
+        val bmp = remember(icon) {
+            try {
+                icon.toBitmap(96, 96).asImageBitmap()
+            } catch (e: Exception) {
+                null
+            }
+        }
+        if (bmp != null) {
+            Image(bmp, contentDescription = null, modifier = modifier)
+        } else {
+            Surface(modifier = modifier, shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.surfaceVariant) {}
+        }
     } else {
         Surface(modifier = modifier, shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.surfaceVariant) {}
     }

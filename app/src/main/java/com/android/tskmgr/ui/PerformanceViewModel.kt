@@ -38,26 +38,30 @@ class PerformanceViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch(Dispatchers.Default) {
             var first = true
             while (isActive) {
-                val cpu = SystemMetrics.readCpuUsage()
-                val memory = SystemMetrics.readMemory(getApplication())
-                val storage = SystemMetrics.readStorage()
-                val net = SystemMetrics.readNetwork(getApplication(), lastRx, lastTx)
-                lastRx += net.rxBytesPerSec
-                lastTx += net.txBytesPerSec
+                try {
+                    val cpu = SystemMetrics.readCpuUsage()
+                    val memory = SystemMetrics.readMemory(getApplication())
+                    val storage = SystemMetrics.readStorage()
+                    val net = SystemMetrics.readNetwork(getApplication(), lastRx, lastTx)
+                    lastRx += net.rxBytesPerSec
+                    lastTx += net.txBytesPerSec
 
-                val prev = _state.value
-                _state.value = prev.copy(
-                    cpuPercent = cpu?.totalPercent,
-                    cpuHistory = append(prev.cpuHistory, cpu?.totalPercent ?: 0.0),
-                    loadAvg = cpu?.loadAvg,
-                    cores = cpu?.perCore?.drop(1) ?: emptyList(),
-                    memory = memory,
-                    storage = storage,
-                    rxHistory = if (first) prev.rxHistory else append(prev.rxHistory, net.rxBytesPerSec),
-                    txHistory = if (first) prev.txHistory else append(prev.txHistory, net.txBytesPerSec),
-                    networkAvailable = net.available,
-                )
-                first = false
+                    val prev = _state.value
+                    _state.value = prev.copy(
+                        cpuPercent = cpu?.totalPercent,
+                        cpuHistory = append(prev.cpuHistory, cpu?.totalPercent ?: 0.0),
+                        loadAvg = cpu?.loadAvg,
+                        cores = cpu?.perCore?.drop(1) ?: emptyList(),
+                        memory = memory,
+                        storage = storage,
+                        rxHistory = if (first) prev.rxHistory else append(prev.rxHistory, net.rxBytesPerSec),
+                        txHistory = if (first) prev.txHistory else append(prev.txHistory, net.txBytesPerSec),
+                        networkAvailable = net.available,
+                    )
+                    first = false
+                } catch (e: Exception) {
+                    // Never let a sampling failure crash the app.
+                }
                 delay(1000)
             }
         }
