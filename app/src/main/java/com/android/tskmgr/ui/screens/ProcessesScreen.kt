@@ -83,7 +83,10 @@ fun ProcessesScreen(viewModel: ProcessViewModel) {
                         UsageAccessHint(onOpenSettings = { PermissionsHelper.openUsageAccessSettings(context) })
                     }
                 }
-                items(state.recentApps, key = { it.packageName }) { app ->
+                // Key includes lastUsedMillis so two entries of the same package
+                // (should be deduped in the repository, but be safe) can never
+                // collide and crash the LazyColumn with a duplicate-key exception.
+                items(state.recentApps, key = { "${it.packageName}-${it.lastUsedMillis}" }) { app ->
                     RecentAppRow(app)
                     HorizontalDivider(Modifier.padding(horizontal = 16.dp))
                 }

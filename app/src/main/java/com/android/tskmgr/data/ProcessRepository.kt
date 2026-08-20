@@ -80,6 +80,11 @@ class ProcessRepository(private val context: Context) {
                 compareByDescending<android.app.usage.UsageStats> { it.packageName in activePackages }
                     .thenByDescending { it.lastTimeUsed },
             )
+            // queryUsageStats can return several entries per package (one per
+            // interval bucket). Keep only the most recent/active entry of each
+            // package, otherwise the Processes tab would show duplicate rows and
+            // crash the LazyColumn (non-unique item keys) when scrolled into view.
+            .distinctBy { it.packageName }
             .take(limit)
             .mapNotNull { s ->
                 val info = try { pm.getApplicationInfo(s.packageName, 0) } catch (e: Exception) { return@mapNotNull null }
