@@ -2,7 +2,6 @@ package com.android.tskmgr.ui.screens
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,6 +15,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -34,15 +35,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import com.android.tskmgr.data.ProcessInfo
+import com.android.tskmgr.data.RecentAppInfo
 import com.android.tskmgr.data.SystemMetrics
 import com.android.tskmgr.ui.ProcessViewModel
-
+import java.util.concurrent.TimeUnit
 
 @Composable
 fun ProcessesScreen(viewModel: ProcessViewModel) {
@@ -61,11 +62,29 @@ fun ProcessesScreen(viewModel: ProcessViewModel) {
         } else {
             LazyColumn {
                 item {
-                    ProcessHeader()
+                    InfoBanner()
+                }
+                item {
+                    SectionHeader("Running processes (${state.processes.size})")
                 }
                 items(state.processes, key = { "${it.pid}-${it.processName}" }) { process ->
                     ProcessRow(process = process, onKill = { viewModel.killProcess(process) })
                     HorizontalDivider(Modifier.padding(horizontal = 16.dp))
+                }
+                item {
+                    SectionHeader("Recently used apps (${state.recentApps.size})")
+                }
+                if (!state.hasUsageAccess) {
+                    item {
+                        UsageAccessHint()
+                    }
+                }
+                items(state.recentApps, key = { it.packageName }) { app ->
+                    RecentAppRow(app)
+                    HorizontalDivider(Modifier.padding(horizontal = 16.dp))
+                }
+                item {
+                    Spacer(Modifier.height(24.dp))
                 }
             }
         }
@@ -74,17 +93,46 @@ fun ProcessesScreen(viewModel: ProcessViewModel) {
 }
 
 @Composable
-private fun ProcessHeader() {
-    Row(
-        Modifier
+private fun InfoBanner() {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+        modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp, 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("Name", Modifier.weight(1f), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text("PID", Modifier.width(56.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text("Memory", Modifier.width(88.dp), textAlign = androidx.compose.ui.text.style.TextAlign.End, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.width(40.dp))
+        Text(
+            text = "Android 12+ hides most processes from non-root apps. The list below shows what the system exposes, plus recently used apps when usage access is granted.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSecondaryContainer,
+            modifier = Modifier.padding(12.dp),
+        )
+    }
+}
+
+@Composable
+private fun SectionHeader(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(16.dp, 16.dp, 16.dp, 8.dp),
+    )
+}
+
+@Composable
+private fun UsageAccessHint() {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp, 8.dp),
+    ) {
+        Text(
+            text = "Grant \"Usage access\" in the Settings tab to see recently used apps.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(12.dp),
+        )
     }
 }
 
@@ -96,12 +144,12 @@ private fun ProcessRow(process: ProcessInfo, onKill: () -> Unit) {
             .padding(16.dp, 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        AppIcon(process, Modifier.size(36.dp))
+        AppIcon(process.appIcon, Modifier.size(36.dp))
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(process.appLabel, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
             Text(
-                text = process.processName,
+                text = "${process.processName}  ·  ${process.importance}",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -110,7 +158,7 @@ private fun ProcessRow(process: ProcessInfo, onKill: () -> Unit) {
         Text(
             text = SystemMetrics.formatBytes(process.memoryKb * 1024),
             Modifier.width(88.dp),
-            textAlign = androidx.compose.ui.text.style.TextAlign.End,
+            textAlign = TextAlign.End,
             style = MaterialTheme.typography.bodySmall,
         )
         Spacer(Modifier.width(8.dp))
@@ -132,12 +180,47 @@ private fun ProcessRow(process: ProcessInfo, onKill: () -> Unit) {
 }
 
 @Composable
-private fun AppIcon(process: ProcessInfo, modifier: Modifier = Modifier) {
-    val icon = process.appIcon
+private fun RecentAppRow(app: RecentAppInfo) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(16.dp, 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        AppIcon(app.appIcon, Modifier.size(36.dp))
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(app.appLabel, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+            Text(
+                text = "${app.packageName}  ·  ${formatLastUsed(app.lastUsedMillis)}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Text(
+            text = if (app.isRunning) "Running" else "Not running",
+            style = MaterialTheme.typography.labelMedium,
+            color = if (app.isRunning) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun AppIcon(icon: android.graphics.drawable.Drawable?, modifier: Modifier = Modifier) {
     if (icon != null) {
-        val bmp = remember(process.appIcon) { icon.toBitmap(96, 96).asImageBitmap() }
+        val bmp = remember(icon) { icon.toBitmap(96, 96).asImageBitmap() }
         Image(bmp, contentDescription = null, modifier = modifier)
     } else {
         Surface(modifier = modifier, shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.surfaceVariant) {}
+    }
+}
+
+private fun formatLastUsed(millis: Long): String {
+    val diff = System.currentTimeMillis() - millis
+    return when {
+        diff < TimeUnit.MINUTES.toMillis(1) -> "just now"
+        diff < TimeUnit.HOURS.toMillis(1) -> "${diff / TimeUnit.MINUTES.toMillis(1)} min ago"
+        diff < TimeUnit.DAYS.toMillis(1) -> "${diff / TimeUnit.HOURS.toMillis(1)} h ago"
+        else -> "${diff / TimeUnit.DAYS.toMillis(1)} d ago"
     }
 }

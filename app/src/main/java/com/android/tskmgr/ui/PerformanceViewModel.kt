@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.tskmgr.data.SystemMetrics
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,16 +13,18 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 data class PerformanceUiState(
-    val cpuPercent: Double = 0.0,
+    val cpuPercent: Double? = null,
     val cpuHistory: List<Double> = emptyList(),
+    val loadAvg: Double? = null,
     val cores: List<Double> = emptyList(),
     val memory: SystemMetrics.MemoryInfo? = null,
     val storage: SystemMetrics.StorageInfo? = null,
     val rxHistory: List<Long> = emptyList(),
     val txHistory: List<Long> = emptyList(),
+    val networkAvailable: Boolean = true,
 )
 
-/** Drives the Performance tab, sampling every second. */
+/** Drives the Performance tab, sampling every second on a background thread. */
 class PerformanceViewModel(app: Application) : AndroidViewModel(app) {
 
     private val _state = MutableStateFlow(PerformanceUiState())
@@ -32,24 +35,29 @@ class PerformanceViewModel(app: Application) : AndroidViewModel(app) {
     private var lastTx = 0L
 
     init {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.Default) {
+            var first = true
             while (isActive) {
                 val cpu = SystemMetrics.readCpuUsage()
                 val memory = SystemMetrics.readMemory(getApplication())
                 val storage = SystemMetrics.readStorage()
-                val net = SystemMetrics.readNetwork(lastRx, lastTx)
-                lastRx = lastRx + net.rxBytesPerSec
-                lastTx = lastTx + net.txBytesPerSec
+                val net = SystemMetrics.readNetwork(getApplication(), lastRx, lastTx)
+                lastRx += net.rxBytesPerSec
+                lastTx += net.txBytesPerSec
 
-                _state.value = _state.value.copy(
-                    cpuPercent = cpu?.totalPercent ?: 0.0,
-                    cpuHistory = append(_state.value.cpuHistory, cpu?.totalPercent ?: 0.0),
+                val prev = _state.value
+                _state.value = prev.copy(
+                    cpuPercent = cpu?.totalPercent,
+                    cpuHistory = append(prev.cpuHistory, cpu?.totalPercent ?: 0.0),
+                    loadAvg = cpu?.loadAvg,
                     cores = cpu?.perCore?.drop(1) ?: emptyList(),
                     memory = memory,
                     storage = storage,
-                    rxHistory = append(_state.value.rxHistory, net.rxBytesPerSec),
-                    txHistory = append(_state.value.txHistory, net.txBytesPerSec),
+                    rxHistory = if (first) prev.rxHistory else append(prev.rxHistory, net.rxBytesPerSec),
+                    txHistory = if (first) prev.txHistory else append(prev.txHistory, net.txBytesPerSec),
+                    networkAvailable = net.available,
                 )
+                first = false
                 delay(1000)
             }
         }

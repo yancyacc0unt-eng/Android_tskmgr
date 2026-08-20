@@ -17,3 +17,12 @@ data class ProcessInfo(
     val isSystem: Boolean,
     val canKill: Boolean,
 )
+
+/** A recently used app, from UsageStatsManager (requires usage access). */
+data class RecentAppInfo(
+    val packageName: String,
+    val appLabel: String,
+    val appIcon: Drawable?,
+    val lastUsedMillis: Long,
+    val isRunning: Boolean,
+)

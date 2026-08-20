@@ -48,23 +48,47 @@ fun PerformanceScreen(viewModel: PerformanceViewModel) {
 
 @Composable
 private fun CpuCard(state: PerformanceUiState) {
-    SurfaceCard(title = "CPU", value = String.format(Locale.US, "%.1f%%", state.cpuPercent)) {
-        HistoryChart(values = state.cpuHistory.map { it.toFloat() }, color = MaterialTheme.colorScheme.primary, maxValue = 100f, modifier = Modifier.height(120.dp))
-        if (state.cores.isNotEmpty()) {
-            Spacer(Modifier.height(12.dp))
-            Text(
-                text = "Cores",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                state.cores.forEach { core ->
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-                        PercentBar(core, MaterialTheme.colorScheme.primary, Modifier.fillMaxWidth().height(8.dp))
-                        Spacer(Modifier.height(4.dp))
-                        Text(String.format(Locale.US, "%.0f%%", core), style = MaterialTheme.typography.labelSmall)
+    val cpuPercent = state.cpuPercent
+    val value = when {
+        cpuPercent != null -> String.format(Locale.US, "%.1f%%", cpuPercent)
+        state.loadAvg != null -> String.format(Locale.US, "Load %.2f", state.loadAvg)
+        else -> "Unavailable"
+    }
+    SurfaceCard(title = "CPU", value = value) {
+        when {
+            cpuPercent != null -> {
+                HistoryChart(values = state.cpuHistory.map { it.toFloat() }, color = MaterialTheme.colorScheme.primary, maxValue = 100f, modifier = Modifier.height(120.dp))
+                if (state.cores.isNotEmpty()) {
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        text = "Cores",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        state.cores.forEach { core ->
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
+                                PercentBar(core, MaterialTheme.colorScheme.primary, Modifier.fillMaxWidth().height(8.dp))
+                                Spacer(Modifier.height(4.dp))
+                                Text(String.format(Locale.US, "%.0f%%", core), style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
                     }
                 }
+            }
+            state.loadAvg != null -> {
+                Text(
+                    text = "System CPU % is not readable by non-root apps on Android 12+. Showing the 1-minute load average instead (cores busy = load ≈ core count).",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            else -> {
+                Text(
+                    text = "Android 12+ blocks non-root apps from reading /proc/stat, so system CPU usage is not available. Load average is not readable either on this device.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }
@@ -112,6 +136,14 @@ private fun NetworkCard(state: PerformanceUiState) {
     val rxMax = state.rxHistory.maxOrNull()?.toFloat() ?: 1f
     val txMax = state.txHistory.maxOrNull()?.toFloat() ?: 1f
     SurfaceCard(title = "Network", value = "RX ${SystemMetrics.formatBytes(state.rxHistory.lastOrNull() ?: 0L)}/s") {
+        if (!state.networkAvailable) {
+            Text(
+                text = "Network counters are not readable. Grant \"Usage access\" in Settings to enable network monitoring.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(8.dp))
+        }
         Row {
             Column(Modifier.weight(1f)) {
                 Text("Download", style = MaterialTheme.typography.labelMedium)
